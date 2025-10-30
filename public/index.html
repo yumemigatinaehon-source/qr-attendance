@@ -2,27 +2,40 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>出席確認</title>
+<title>出席記録</title>
 </head>
 <body>
-  <h2 id="title"></h2>
-  <button onclick="record('入室')">入室</button>
-  <button onclick="record('退室')">退室</button>
+  <h2 id="title">出席記録ページ</h2>
+  <p id="status">送信中...</p>
 
   <script>
+    // クッキーから出席番号取得 or 新規発行
+    function getOrCreateID() {
+      const name = "student_id=";
+      const found = document.cookie.split(";").find(c => c.trim().startsWith(name));
+      if (found) return found.split("=")[1];
+      const newId = "S" + Math.random().toString(36).slice(2, 8);
+      document.cookie = `${name}${newId}; path=/; max-age=31536000`; // 1年有効
+      return newId;
+    }
+
+    const studentId = getOrCreateID();
     const params = new URLSearchParams(location.search);
     const room = params.get("room") || "不明";
-    document.getElementById("title").textContent = `教室 ${room} 出席ページ`;
+    const action = params.get("action") === "in" ? "入室" :
+                   params.get("action") === "out" ? "退室" : "不明";
 
-    async function record(action) {
-      const time = new Date().toLocaleString("ja-JP");
-      await fetch("/api/record", {
+    document.getElementById("title").textContent = `${room} ${action}`;
+
+    (async () => {
+      const res = await fetch("/api/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room, action, time })
+        body: JSON.stringify({ studentId, room, action })
       });
-      alert(`${action} を記録しました (${time})`);
-    }
+      const msg = await res.text();
+      document.getElementById("status").textContent = msg;
+    })();
   </script>
 </body>
 </html>
