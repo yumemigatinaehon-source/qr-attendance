@@ -7,6 +7,7 @@
 <body>
   <h2 id="title">教室 出席ページ</h2>
 
+  <!-- 入力フォーム -->
   <div id="inputDiv">
     <label>出席番号を入力してください：</label>
     <input type="text" id="studentInput">
@@ -23,6 +24,7 @@
 
     document.getElementById("title").textContent = `教室 ${room} 出席ページ`;
 
+    // --- クッキー操作 ---
     function getCookie(name) {
       const value = document.cookie.split('; ').find(c => c.startsWith(name + "="));
       return value ? value.split('=')[1] : null;
@@ -46,17 +48,26 @@
       recordAttendance(input);
     }
 
+    // --- 入退室自動記録 ---
     async function recordAttendance(id) {
-      if (!action) return; // action パラメータがなければ何もしない
+      if (!action) return; // action パラメータがない場合は何もしない
       const time = new Date().toLocaleString("ja-JP");
       await fetch("/api/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room, studentId: id, action: action === "in" ? "入室" : "退室", time })
+        body: JSON.stringify({ 
+          room, 
+          studentId: id, 
+          action: action === "in" ? "入室" : "退室", 
+          time 
+        })
       });
-      document.getElementById("status").textContent = `${action === "in" ? "入室" : "退室"} を記録しました (${time})`;
+      // 出席番号付きで表示
+      document.getElementById("status").textContent =
+        `${action === "in" ? "入室" : "退室"} を記録しました (${time}) / 出席番号: ${id}`;
     }
 
+    // 初回アクセス時チェック
     const studentId = getCookie("studentId");
     if (studentId) {
       document.getElementById("inputDiv").style.display = "none";
