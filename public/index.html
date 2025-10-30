@@ -2,59 +2,82 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>出席記録</title>
+<title>出席確認</title>
 </head>
 <body>
-<h2 id="title">出席記録ページ</h2>
+  <h2 id="title">教室 出席ページ</h2>
 
-<div id="inputDiv">
-  <label>出席番号を入力してください：</label>
-  <input type="text" id="studentInput">
-  <button onclick="saveStudentId()">送信</button>
-</div>
+  <!-- 入力フォーム -->
+  <div id="inputDiv">
+    <label>出席番号を入力してください：</label>
+    <input type="text" id="studentInput">
+    <button onclick="saveStudentId()">送信</button>
+  </div>
 
-<p id="status"></p>
+  <p id="status"></p>
+  <button id="changeBtn" onclick="showInput()" style="display:none;">出席番号を変更</button>
 
-<script>
-const params = new URLSearchParams(location.search);
-const room = params.get("room") || "不明";
-const action = params.get("action") === "in" ? "入室" :
-               params.get("action") === "out" ? "退室" : "不明";
+  <button onclick="recordAction('入室')">入室</button>
+  <button onclick="recordAction('退室')">退室</button>
 
-function getCookie(name) {
-  const value = document.cookie.split('; ').find(c => c.startsWith(name + "="));
-  return value ? value.split('=')[1] : null;
-}
+  <script>
+    // URLパラメータから教室番号を取得
+    const params = new URLSearchParams(location.search);
+    const room = params.get("room") || "不明";
 
-function saveCookie(name, value) {
-  document.cookie = `${name}=${value}; path=/; max-age=31536000`; // 1年有効
-}
+    document.getElementById("title").textContent = `教室 ${room} 出席ページ`;
 
-function saveStudentId() {
-  const input = document.getElementById("studentInput").value.trim();
-  if (!input) { alert("出席番号を入力してください"); return; }
-  saveCookie("studentId", input);
-  document.getElementById("inputDiv").style.display = "none";
-  recordAttendance(input);
-}
+    // --- クッキー操作関数 ---
+    function getCookie(name) {
+      const value = document.cookie.split('; ').find(c => c.startsWith(name + "="));
+      return value ? value.split('=')[1] : null;
+    }
 
-// 初回アクセスか確認
-const studentId = getCookie("studentId");
-if (studentId) {
-  document.getElementById("inputDiv").style.display = "none";
-  recordAttendance(studentId);
-}
+    function saveCookie(name, value) {
+      document.cookie = `${name}=${value}; path=/; max-age=31536000`; // 1年有効
+    }
 
-async function recordAttendance(id) {
-  document.getElementById("status").textContent = "記録中...";
-  const res = await fetch("/api/record", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ studentId: id, room, action })
-  });
-  const msg = await res.text();
-  document.getElementById("status").textContent = msg;
-}
-</script>
+    // 入力フォーム表示
+    function showInput() {
+      document.getElementById("inputDiv").style.display = "block";
+      document.getElementById("changeBtn").style.display = "none";
+    }
+
+    // 出席番号保存
+    function saveStudentId() {
+      const input = document.getElementById("studentInput").value.trim();
+      if (!input) { alert("出席番号を入力してください"); return; }
+      saveCookie("studentId", input);
+      document.getElementById("inputDiv").style.display = "none";
+      document.getElementById("changeBtn").style.display = "inline";
+      document.getElementById("status").textContent = `出席番号 ${input} を保存しました`;
+    }
+
+    // --- 入退室記録関数 ---
+    async function recordAction(action) {
+      let studentId = getCookie("studentId");
+      if (!studentId) {
+        alert("まず出席番号を入力してください");
+        showInput();
+        return;
+      }
+      const time = new Date().toLocaleString("ja-JP");
+      await fetch("/api/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room, studentId, action, time })
+      });
+      document.getElementById("status").textContent = `${action} を記録しました (${time})`;
+    }
+
+    // 初回アクセス時チェック
+    const studentId = getCookie("studentId");
+    if (studentId) {
+      document.getElementById("inputDiv").style.display = "none";
+      document.getElementById("changeBtn").style.display = "inline";
+    } else {
+      document.getElementById("inputDiv").style.display = "block";
+    }
+  </script>
 </body>
 </html>
