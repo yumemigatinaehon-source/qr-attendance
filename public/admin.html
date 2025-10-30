@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>出席記録一覧</title>
+</head>
+<body>
+  <h2>出席記録一覧</h2>
+  <table border="1">
+    <thead>
+      <tr><th>出席番号</th><th>教室</th><th>動作</th><th>時刻</th></tr>
+    </thead>
+    <tbody id="records"></tbody>
+  </table>
+
+  <script>
+    async function loadRecords() {
+      const res = await fetch("/api/records");
+      const data = await res.text();
+      const rows = data.trim().split("\n").slice(1); // ヘッダ行を除く
+      const tbody = document.getElementById("records");
+
+      tbody.innerHTML = rows.map(line => {
+        const [studentId, room, action, time] = line.split(",");
+        return `<tr>
+          <td>${studentId}</td>
+          <td>${room}</td>
+          <td>${action}</td>
+          <td>${time}</td>
+        </tr>`;
+      }).join("");
+    }
+    loadRecords();
+  </script>
+</body>
+</html>
