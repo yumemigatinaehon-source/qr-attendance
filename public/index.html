@@ -5,37 +5,56 @@
 <title>出席記録</title>
 </head>
 <body>
-  <h2 id="title">出席記録ページ</h2>
-  <p id="status">送信中...</p>
+<h2 id="title">出席記録ページ</h2>
 
-  <script>
-    // クッキーから出席番号取得 or 新規発行
-    function getOrCreateID() {
-      const name = "student_id=";
-      const found = document.cookie.split(";").find(c => c.trim().startsWith(name));
-      if (found) return found.split("=")[1];
-      const newId = "S" + Math.random().toString(36).slice(2, 8);
-      document.cookie = `${name}${newId}; path=/; max-age=31536000`; // 1年有効
-      return newId;
-    }
+<div id="inputDiv">
+  <label>出席番号を入力してください：</label>
+  <input type="text" id="studentInput">
+  <button onclick="saveStudentId()">送信</button>
+</div>
 
-    const studentId = getOrCreateID();
-    const params = new URLSearchParams(location.search);
-    const room = params.get("room") || "不明";
-    const action = params.get("action") === "in" ? "入室" :
-                   params.get("action") === "out" ? "退室" : "不明";
+<p id="status"></p>
 
-    document.getElementById("title").textContent = `${room} ${action}`;
+<script>
+const params = new URLSearchParams(location.search);
+const room = params.get("room") || "不明";
+const action = params.get("action") === "in" ? "入室" :
+               params.get("action") === "out" ? "退室" : "不明";
 
-    (async () => {
-      const res = await fetch("/api/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, room, action })
-      });
-      const msg = await res.text();
-      document.getElementById("status").textContent = msg;
-    })();
-  </script>
+function getCookie(name) {
+  const value = document.cookie.split('; ').find(c => c.startsWith(name + "="));
+  return value ? value.split('=')[1] : null;
+}
+
+function saveCookie(name, value) {
+  document.cookie = `${name}=${value}; path=/; max-age=31536000`; // 1年有効
+}
+
+function saveStudentId() {
+  const input = document.getElementById("studentInput").value.trim();
+  if (!input) { alert("出席番号を入力してください"); return; }
+  saveCookie("studentId", input);
+  document.getElementById("inputDiv").style.display = "none";
+  recordAttendance(input);
+}
+
+// 初回アクセスか確認
+const studentId = getCookie("studentId");
+if (studentId) {
+  document.getElementById("inputDiv").style.display = "none";
+  recordAttendance(studentId);
+}
+
+async function recordAttendance(id) {
+  document.getElementById("status").textContent = "記録中...";
+  const res = await fetch("/api/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ studentId: id, room, action })
+  });
+  const msg = await res.text();
+  document.getElementById("status").textContent = msg;
+}
+</script>
 </body>
 </html>
